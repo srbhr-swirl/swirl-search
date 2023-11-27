@@ -3,6 +3,8 @@
 @contact:    sid@swirl.today
 '''
 
+import os
+
 from operator import itemgetter
 from urllib.parse import urlparse
 
@@ -12,7 +14,8 @@ from swirl.processors.processor import *
 
 from datetime import datetime
 
-from openai import OpenAI
+# from openai import OpenAI
+from litellm import completion
 
 from celery import group
 import threading
@@ -214,7 +217,7 @@ class RAGPostResultProcessor(PostResultProcessor):
             return 0
 
         try:
-            completions_new = self.client.chat.completions.create(
+            completions_new = completion(
                 model=MODEL,
                 messages=[
                     {"role": "system", "content": rag_prompt.get_role_system_guide_text()},
@@ -259,10 +262,10 @@ class RAGPostResultProcessor(PostResultProcessor):
     def process(self, should_return=False):
 
         logger.info('RUN RAG')
-        # to do: remove foo:etc
         self.client = None
         if getattr(settings, 'OPENAI_API_KEY', None):
-            self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
+            # put into environment so LiteLLM can find it
+            os.environ["OPENAI_API_KEY"] = settings.OPENAI_API_KEY
         else:
             logger.warning("RAG OPENAI_API_KEY unset!")
             return 0
