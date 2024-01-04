@@ -12,7 +12,7 @@ from swirl.processors.processor import *
 
 from datetime import datetime
 
-import openai
+from openai import OpenAI
 
 from celery import group
 import threading
@@ -29,6 +29,8 @@ MODEL = MODEL_3
 MODEL_TOK_MAX = MODEL_3_TOK_MAX
 MODEL_DEFAULT_SYSTEM_GUIDE = "You are a helpful assistant who considers recent information when answering questions."
 FETCH_TO_SECS=10
+DO_MESSAGE_MOCK_ON_ERROR=False
+MESSAGE_MOCK_ON_ERROR=f"Mock API resposne from {MODEL}. This is a mock response for testing purpose only."
 
 from celery.utils.log import get_task_logger
 logger = get_task_logger(__name__)
@@ -81,8 +83,8 @@ class RAGPostResultProcessor(PostResultProcessor):
 
     type="RAGPostResultProcessor"
 
-    def __init__(self, search_id, request_id='', is_socket_logic=False, rag_query_items=False):
-        super().__init__(search_id=search_id, request_id=request_id, is_socket_logic=is_socket_logic, rag_query_items=rag_query_items)
+    def __init__(self, search_id, request_id='', should_get_results=False, rag_query_items=False):
+        super().__init__(search_id=search_id, request_id=request_id, should_get_results=should_get_results, rag_query_items=rag_query_items)
         self.tasks = None
         self.stop_background_thread = False
         try:
@@ -168,7 +170,7 @@ class RAGPostResultProcessor(PostResultProcessor):
 
         result_group = group(*tasks).apply_async()
         self.tasks = result_group
-        results = result_group.get()
+        results = result_group.get(interval=0.05, timeout=120)
         if self.stop_background_thread:
             return 0
         for result in results:
@@ -212,23 +214,28 @@ class RAGPostResultProcessor(PostResultProcessor):
             return 0
 
         try:
-            completions_new = openai.ChatCompletion.create(
+            completions_new = self.client.chat.completions.create(
                 model=MODEL,
                 messages=[
                     {"role": "system", "content": rag_prompt.get_role_system_guide_text()},
                     {"role": "user", "content": new_prompt_text},
                 ],
-                temperature=0,
+                temperature=0
             )
-            model_response = completions_new['choices'][0]['message']['content'] # FROM API Doc
+            model_response = completions_new.choices[0].message.content
             logger.info(f'RAG: fetch_prompt_errors follow:')
             for (k,v) in fetch_prompt_errors.items():
                 logger.info(f'RAG:\t url:{k} problem:{v}')
         except Exception as err:
-            logger.error(f"error : {err} while creating CGPT response")
-            result = Result.objects.create(owner=self.search.owner, search_id=self.search, provider_id=5, searchprovider='ChatGPT', query_string_to_provider=new_prompt_text[:256], query_to_provider='None', status='READY', retrieved=1, found=1, json_results=[], time=0.0)
-            result.save()
-            return 0
+            if DO_MESSAGE_MOCK_ON_ERROR:
+                logger.error(f"error : {err} while creating CGPT response")
+                logger.info(f'Returning mock message instead : {MESSAGE_MOCK_ON_ERROR}')
+                model_response = MESSAGE_MOCK_ON_ERROR
+            else:
+                logger.error(f"error : {err} while creating CGPT response")
+                result = Result.objects.create(owner=self.search.owner, search_id=self.search, provider_id=5, searchprovider='ChatGPT', query_string_to_provider=new_prompt_text[:256], query_to_provider='None', status='READY', retrieved=1, found=1, json_results=[], time=0.0)
+                result.save()
+                return 0
 
         logger.info(f'RAGTITLE: {self.search.query_string_processed}')
         logger.info(f'RAGBODY: {model_response}')
@@ -241,7 +248,8 @@ class RAGPostResultProcessor(PostResultProcessor):
         rag_result['author'] = 'ChatGPT'
         rag_result['searchprovider'] = 'ChatGPT'
         rag_result['searchprovider_rank'] = 1
-        rag_result['result_block'] = 'ai_summary'
+        if settings.SWIRL_DEFAULT_RESULT_BLOCK:
+            rag_result['result_block'] = getattr(settings, 'SWIRL_DEFAULT_RESULT_BLOCK', 'ai_summary')
         rag_result['rag_query_items'] = [str(item['swirl_id']) for item in chosen_rag]
 
         result = Result.objects.create(owner=self.search.owner, search_id=self.search, provider_id=5, searchprovider='ChatGPT', query_string_to_provider=new_prompt_text[:256], query_to_provider='None', status='READY', retrieved=1, found=1, json_results=[rag_result], time=0.0)
@@ -249,12 +257,11 @@ class RAGPostResultProcessor(PostResultProcessor):
         return result
 
 
-    def process(self, should_return=False):
-
-        logger.info('RUN RAG')
+    def process(self, should_return=True):
         # to do: remove foo:etc
+        self.client = None
         if getattr(settings, 'OPENAI_API_KEY', None):
-            openai.api_key = settings.OPENAI_API_KEY
+            self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
         else:
             logger.warning("RAG OPENAI_API_KEY unset!")
             return 0

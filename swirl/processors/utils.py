@@ -370,8 +370,9 @@ def highlight_list(target_str, word_list):
     # Now for all terms in the target list, find them, case insensitive in the list of hi light
     # words and then highlight them in the return tartget string.
     for word in all_words:
+        l_word = word.lower()
         # If the word matches any of the source words, add it to the list of highlighted words
-        if word.lower() in hili_words:
+        if l_word in hili_words and not l_word in stopwords:
             ret = ret.replace(word,f'{SWIRL_HIGHLIGHT_START_CHAR}{word}{SWIRL_HIGHLIGHT_END_CHAR}')
 
     return ret
@@ -769,11 +770,24 @@ def _date_float_parse_to_timestamp(s):
         logger.debug(f'{x} : unable to convert {s} as float to timestamp')
     return ret
 
+def try_micro_conversion(date_str):
+    try:
+        if date_str.isdigit() and len(date_str) >= 13:
+            ret_date_str = f'{int(date_str)/1000}'
+            return ret_date_str
+        else:
+            return date_str
+    except Exception as err:
+        logger.debug(f'micro conversion failed {err}')
+        return date_str
+
+
 def date_str_to_timestamp(s):
     """
         Convert the input to a string and try to make a timestamp from it using known string formats
         and raw numeric values
     """
+    s = try_micro_conversion(s)
     ret = _date_str_parse_to_timestamp(s)
     if not ret: ret = _date_float_parse_to_timestamp(s)
     if not ret:
