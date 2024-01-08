@@ -56,7 +56,7 @@ class OpenAIClient(SwirlAIClient):
         try:
             if provider == "OPENAI":
                 from openai import OpenAI
-                ai_client = OpenAI(api_key=key)
+                ai_client = OpenAI(api_key=key, model=MODEL)
             elif provider == "AZUREAI":
                 from openai import AzureOpenAI
                 ai_client = AzureOpenAI(api_key=key, azure_endpoint=self._azure_endpoint, api_version="2023-10-01-preview")
