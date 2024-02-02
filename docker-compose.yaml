@@ -1,5 +1,5 @@
 version: '3.3'
- 
+
 services:
   redis:
     image: redis
@@ -16,4 +16,10 @@ services:
              python swirl.py start celery-worker celery-beats &&
              daphne -b 0.0.0.0 -p 8000 swirl_server.asgi:application'
     environment: # Environment variables section
-      - OPENAI_API_KEY=${OPENAI_API_KEY} 
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - AZURE_OPENAI_KEY=${AZURE_OPENAI_KEY}
+      - AZURE_MODE=${AZURE_MODEL}
+      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
+      - SWIRL_RAG_MODEL=${SWIRL_RAG_MODEL}
+      - SWIRL_REWRITE_MODEL=${SWIRL_REWRITE_MODEL}
+      - SWIRL_QUERY_MODEL=${SWIRL_QUERY_MODEL}
