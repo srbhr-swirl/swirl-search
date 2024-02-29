@@ -63,4 +63,4 @@ jobs:
         path: |
           logs/
           /var/log/syslog*
-          screenshots/
+          ${{ github.workspace }}/screenshots/*
