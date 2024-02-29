@@ -46,6 +46,12 @@ jobs:
         password: ${{ secrets.DOCKER_PASSWORD }}
     - name: Run the WIP Tests Suite
       run: docker run --net=host -t swirlai/swirl-search-qa:wip-tests sh -c "behave --tags=${{ github.event.inputs.behave_tags }}"
+    - name: Debug - List workspace and screenshots directory contents
+      run: |
+        echo "Listing workspace contents:"
+        ls -la ${{ github.workspace }}
+        echo "Listing screenshots directory contents:"
+        ls -la ${{ github.workspace }}/screenshots/
     - name: Upload Log Files and Screenshots
       if: always()
       uses: actions/upload-artifact@v4
