@@ -47,6 +47,7 @@ jobs:
     - name: Run the WIP Tests Suite
       run: docker run --net=host -t swirlai/swirl-search-qa:wip-tests sh -c "behave --tags=${{ github.event.inputs.behave_tags }}"
     - name: Debug - List workspace and screenshots directory contents
+      if: always()
       run: |
         echo "Listing workspace contents:"
         ls -la ${{ github.workspace }}
