@@ -59,6 +59,6 @@ jobs:
       with:
         name: test-artifacts
         path: |
-          logs/
-          /var/log/syslog*
+          ${{ github.workspace }}/logs/
+          ${{ github.workspace }}/var/log/syslog*
           ${{ github.workspace }}/screenshots/*.png
