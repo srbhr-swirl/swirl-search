@@ -255,8 +255,45 @@ class MappingResultProcessor(ResultProcessor):
 
             #############################################
             # final assembly
-            if payload:
-                swirl_result['payload'] = payload
+            # if payload:
+            swirl_result['payload'] = {
+                "item_type": "Shorts",
+                "SKU": 168138.6,
+                "dataset": [
+                    [
+                        "item_type",
+                        "SKU"
+                    ],
+                    [
+                        "Boots",
+                        996721.3
+                    ],
+                    [
+                        "item_type",
+                        "SKU"
+                    ],
+                    [
+                        "Underwear",
+                        870721.3
+                    ],
+                    [
+                        "item_type",
+                        "SKU"
+                    ],
+                    [
+                        "Shirts",
+                        341721.3
+                    ],
+                    [
+                        "item_type",
+                        "SKU"
+                    ],
+                    [
+                        "Shorts",
+                        22721.3
+                    ],
+                ]
+            }
             # if result_block:
             #     swirl_result['result_block'] = result_block
             # try to find a title, if none provided
