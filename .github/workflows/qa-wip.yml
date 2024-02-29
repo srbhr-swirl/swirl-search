@@ -48,13 +48,11 @@ jobs:
       run: mkdir -p ${{ github.workspace }}/screenshots/
     - name: Run the WIP Tests Suite
       run: docker run --net=host -t swirlai/swirl-search-qa:wip-tests sh -c "behave --tags=${{ github.event.inputs.behave_tags }}"
-    - name: Debug - List workspace and screenshots directory contents
+    - name: Debug - Verify Screenshots and List Contents
       if: always()
       run: |
-        echo "Listing workspace contents:"
-        ls -la ${{ github.workspace }}
-        echo "Listing screenshots directory contents:"
         ls -la ${{ github.workspace }}/screenshots/
+        file ${{ github.workspace }}/screenshots/* || echo "No screenshot files found." 
     - name: Upload Log Files
       if: always()
       uses: actions/upload-artifact@v4
